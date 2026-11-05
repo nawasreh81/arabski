@@ -399,6 +399,8 @@
             if (attempts >= tries) failed = true;
             revealed = true;
             target.innerHTML = '<p class="ph small">' + diffHTML(r) + '</p>';
+            const ab = el.querySelector('.answer-btn');
+            if (ab) ab.remove();
             status.textContent = t('redWords');
             micBtn.querySelector('span').textContent = t('tryAgain');
             speak(phrase.ar, 0.55);
