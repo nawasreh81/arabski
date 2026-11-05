@@ -1,5 +1,5 @@
 /* Offline cache: the app loads without internet. Bump VERSION when files change. */
-const VERSION = 'arabski-v2';
+const VERSION = 'arabski-v3';
 const FILES = ['./', 'index.html', 'styles.css', 'manifest.webmanifest', 'js/vendor/supabase.js', 'js/config.js', 'js/sync.js', 'js/data.js', 'js/sounds.js', 'js/ui.js', 'js/app.js', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VERSION).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); }));

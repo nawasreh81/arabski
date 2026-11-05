@@ -34,12 +34,15 @@
     return fresh();
   }
   let S = load();
+  // Opened through the husband's follow link: show her progress and change nothing here.
+  const followId = new URLSearchParams(location.search).get('f');
   function store() {
+    if (followId) return;
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage blocked */ }
   }
   function save() {
     store();
-    if (window.PLSync) window.PLSync.schedule();
+    if (window.PLSync && !followId) window.PLSync.schedule();
   }
   function item(id) {
     if (!S.items[id]) S.items[id] = { learnedOn: null, errors: 0, seen: 0, right: 0, weak: false };
@@ -1123,6 +1126,7 @@
   /* ---------- Husband's panel (Arabic, for following her progress) ---------- */
   function husbandScreen() {
     const F = frame('لوحة الزوج', settings);
+    if (followId) F.close.hidden = true;
     const st = stats();
     const hard = ALL_IDS.filter(function (id) { return S.items[id] && S.items[id].errors > 0; })
       .sort(function (a, b) { return S.items[b].errors - S.items[a].errors; }).slice(0, 8);
@@ -1140,8 +1144,16 @@
     v += '<div class="card"><h3>أصعب الجمل عليها</h3>' + (hard.length ? '<ul class="word-list">' + hard.map(function (id) {
       return '<li><button type="button" class="form ar-line" data-say="' + esc(PHRASES[id].ar) + '">' + esc(PHRASES[id].ar) + '</button><span class="w-mean">' + S.items[id].errors + ' أخطاء</span></li>';
     }).join('') + '</ul><p class="note">تدرّب معها على هذه الجمل بصوتك.</p>' : '<p class="note">لا توجد أخطاء مسجلة بعد.</p>') + '</div>';
-    v += '<p class="note">لترى تقدمها من جوالك، سجّل الدخول في التطبيق بحسابها نفسه.</p></div>';
+    const id = !followId && window.PLSync && PLSync.status().id;
+    const link = id ? location.origin + location.pathname + '?f=' + id : '';
+    if (id) v += '<div class="card"><h3>رابط المتابعة</h3><p class="note">أرسل هذا الرابط إلى جوالك واحفظه، فتفتح منه تقدمها في أي وقت بدون تسجيل دخول.</p><p class="follow-link" dir="ltr">' + esc(link) + '</p><button type="button" class="btn primary" data-a="copy">انسخ الرابط</button></div>';
+    else if (!followId) v += '<p class="note">يظهر رابط المتابعة هنا عندما يتصل الجوال بالإنترنت.</p>';
+    v += '</div>';
     F.stage.innerHTML = v;
+    const cp = F.stage.querySelector('[data-a=copy]');
+    if (cp) cp.onclick = function () {
+      navigator.clipboard.writeText(link).then(function () { cp.textContent = 'تم النسخ'; }).catch(function () { cp.textContent = 'انسخ الرابط يدوياً'; });
+    };
   }
 
   /* ---------- Settings ---------- */
@@ -1163,7 +1175,7 @@
     v += '<p class="note">' + t('voiceNote') + '</p><details><summary>' + t('installVoice') + '</summary><p>' + t('installVoiceTxt') + '</p></details></div>';
     v += '<div class="card"><h3>' + t('micH') + '</h3><p class="note">' + (SR ? t('micOk') : t('micNo')) + '</p></div>';
     v += '<div class="card"><h3>' + t('installH') + '</h3><button type="button" class="btn primary" data-a="install" hidden>' + t('installNow') + '</button><p>' + t('installTxt') + '</p></div>';
-    const cloudOn = window.PLSync && PLSync.status().email;
+    const cloudOn = window.PLSync && PLSync.status().id;
     v += '<div class="card"><h3>' + t('progressH') + '</h3><p class="note">' + t('savedHere', cloudOn ? t('savedCloud') : '', esc(S.startDate)) + '</p><button type="button" class="btn ghost" data-a="husband">' + t('husbandBtn') + '</button><button type="button" class="btn danger" data-a="reset">' + t('reset') + '</button><div class="reset-confirm" hidden><p>' + t('resetQ') + '</p><div class="row"><button type="button" class="btn danger" data-a="reset-yes">' + t('resetYes') + '</button><button type="button" class="btn ghost" data-a="reset-no">' + t('cancel') + '</button></div></div></div>';
 
     F.stage.innerHTML = v;
@@ -1196,103 +1208,25 @@
   }
 
   /* ---------- Cloud backup (Supabase) ---------- */
-  const CLOUD_KEY = { synced: 'cSynced', syncing: 'cSyncing', offline: 'cOffline', error: 'cError', 'signed-out': 'cSignedOut', recovery: 'cRecovery' };
+  const CLOUD_KEY = { synced: 'cSynced', syncing: 'cSyncing', offline: 'cOffline', error: 'cError' };
   function cloudText(state) { return CLOUD_KEY[state] ? t(CLOUD_KEY[state]) : ''; }
   function updateCloud() {
     const b = app.querySelector('[data-a=cloud]');
     if (!b) return;
-    if (!window.PLSync || !PLSync.enabled) { b.hidden = true; return; }
-    const st = PLSync.status();
+    const st = window.PLSync && PLSync.enabled ? PLSync.status() : null;
+    if (!st || !CLOUD_KEY[st.state]) { b.hidden = true; return; }
     b.hidden = false;
     b.className = 'cloud is-' + st.state;
     b.textContent = cloudText(st.state);
   }
-  function when(iso) {
-    try { return new Date(iso).toLocaleString(S.lang, { dateStyle: 'medium', timeStyle: 'short' }); } catch (e) { return iso; }
-  }
   function renderSync() {
     const card = document.getElementById('sync-card');
     if (!card) return;
-    if (!window.PLSync || !PLSync.enabled) {
-      card.innerHTML = '<h3>' + t('cloudH') + '</h3><p class="note">' + t('cloudOff') + '</p>';
-      return;
-    }
-    const st = PLSync.status();
-    let html = '<h3>' + t('cloudH') + '</h3>';
-    if (st.recovery) {
-      html += '<p class="note">' + t('cloudNew') + '</p>' +
-        '<label class="lbl" for="new-pass">' + t('newPass') + '</label><input id="new-pass" type="password" autocomplete="new-password" minlength="8">' +
-        '<button type="button" class="btn primary" data-a="save-pass">' + t('savePass') + '</button>';
-    } else if (st.email) {
-      html += '<p>' + t('signedAs') + ' <bdi>' + esc(st.email) + '</bdi></p>' +
-        '<p class="cloud-line is-' + st.state + '">' + esc(cloudText(st.state)) + '</p>' +
-        (st.last ? '<p class="note">' + esc(t('lastSave', when(st.last))) + '</p>' : '') +
-        (st.state === 'error' && st.error ? '<p class="note">' + esc(st.error) + '</p>' : '') +
-        '<p class="note">' + t('anyDevice') + '</p>' +
-        '<div class="row"><button type="button" class="btn primary" data-a="sync-now">' + t('saveNow') + '</button><button type="button" class="btn ghost" data-a="sign-out">' + t('signOut') + '</button></div>';
-    } else {
-      html += '<p class="note">' + t('cloudWhy') + '</p>' +
-        '<form class="auth" novalidate>' +
-        '<label class="lbl" for="sync-email">' + t('email') + '</label><input id="sync-email" type="email" autocomplete="email" inputmode="email" required>' +
-        '<label class="lbl" for="sync-pass">' + t('passLbl') + '</label><input id="sync-pass" type="password" autocomplete="current-password" minlength="8" required>' +
-        '<div class="row"><button type="submit" class="btn primary" data-a="sign-in">' + t('signIn') + '</button><button type="button" class="btn ghost" data-a="sign-up">' + t('signUp') + '</button></div>' +
-        '<button type="button" class="linkish" data-a="forgot">' + t('forgot') + '</button>' +
-        '</form>';
-    }
-    html += '<p class="auth-msg" role="status"></p>';
-    card.innerHTML = html;
-    const msg = card.querySelector('.auth-msg');
-    function say(x, ok) { msg.textContent = x; msg.className = 'auth-msg' + (ok ? ' ok' : ' err'); }
-    function busy(btn, on) { btn.disabled = on; }
-
-    const form = card.querySelector('form.auth');
-    if (form) {
-      const email = card.querySelector('#sync-email'), pass = card.querySelector('#sync-pass');
-      function valid(needPass) {
-        if (!/^\S+@\S+\.\S+$/.test(email.value.trim())) { say(t('badEmail')); email.focus(); return false; }
-        if (needPass && pass.value.length < 8) { say(t('shortPass')); pass.focus(); return false; }
-        return true;
-      }
-      form.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        if (!valid(true)) return;
-        const b = card.querySelector('[data-a=sign-in]');
-        busy(b, true); say(t('signingIn'), true);
-        const r = await PLSync.signIn(email.value.trim(), pass.value);
-        busy(b, false);
-        if (r.error) say(r.error);
-      });
-      card.querySelector('[data-a=sign-up]').onclick = async function () {
-        if (!valid(true)) return;
-        busy(this, true); say(t('signingUp'), true);
-        const r = await PLSync.signUp(email.value.trim(), pass.value);
-        busy(this, false);
-        if (r.error) say(r.error);
-        else if (r.confirm) say(t('confirmMail'), true);
-      };
-      card.querySelector('[data-a=forgot]').onclick = async function () {
-        if (!valid(false)) return;
-        say(t('sending'), true);
-        const r = await PLSync.resetPassword(email.value.trim());
-        if (r.error) say(r.error);
-        else say(t('resetSent'), true);
-      };
-    }
-    const sp = card.querySelector('[data-a=save-pass]');
-    if (sp) sp.onclick = async function () {
-      const p = card.querySelector('#new-pass').value;
-      if (p.length < 8) { say(t('shortPass')); return; }
-      busy(sp, true);
-      const r = await PLSync.setNewPassword(p);
-      busy(sp, false);
-      if (r.error) say(r.error); else { renderSync(); PLSync.syncNow(); }
-    };
-    const sn = card.querySelector('[data-a=sync-now]');
-    if (sn) sn.onclick = function () { PLSync.syncNow(); };
-    const so = card.querySelector('[data-a=sign-out]');
-    if (so) so.onclick = async function () { await PLSync.signOut(); renderSync(); };
+    const st = window.PLSync && PLSync.enabled ? PLSync.status() : null;
+    card.innerHTML = '<h3>' + t('cloudH') + '</h3><p class="note">' + (st && st.id ? t('cloudAuto') : t('cloudLocal')) + '</p>' +
+      (st && CLOUD_KEY[st.state] ? '<p class="cloud-line is-' + st.state + '">' + esc(cloudText(st.state)) + '</p>' : '');
   }
-  if (window.PLSync) {
+  if (window.PLSync && !followId) {
     PLSync.init({
       getState: function () { return S; },
       setState: function (merged) {
@@ -1301,8 +1235,7 @@
         store();
         if (JSON.stringify(S) !== before && app.querySelector('.home')) home();
       },
-      onStatus: function () { updateCloud(); renderSync(); },
-      onRecovery: settings
+      onStatus: function () { updateCloud(); renderSync(); }
     });
   }
 
@@ -1314,5 +1247,17 @@
   }
   document.addEventListener('visibilitychange', function () { if (document.hidden) stopAudio(); });
 
-  home();
+  function followView() {
+    document.documentElement.lang = 'ar';
+    app.innerHTML = '<p class="note" dir="rtl">جارٍ تحميل تقدمها…</p>';
+    PLSync.viewer(followId).then(function (data) {
+      if (!data) { app.innerHTML = '<p class="note" dir="rtl">لم يُحفظ أي تقدم بعد على هذا الرابط.</p>'; return; }
+      S = Object.assign(fresh(), data);
+      husbandScreen();
+    }).catch(function () {
+      app.innerHTML = '<p class="note" dir="rtl">تعذّر تحميل التقدم. تأكد من الاتصال بالإنترنت وأعد فتح الرابط.</p>';
+    });
+  }
+  if (followId && window.PLSync && PLSync.enabled) followView();
+  else home();
 })();
