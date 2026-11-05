@@ -12,8 +12,9 @@
   let hooks = null;
   let timer = null;
   let busy = false;
-  let state = enabled ? 'local' : 'off';
+  let state = enabled ? 'signed-out' : 'off';
   let lastError = '';
+  let recovery = false;
 
   /* ---------- Merging two copies of progress ---------- */
   function maxStr(a, b) { return !a ? b || null : !b ? a : (a > b ? a : b); }
@@ -117,43 +118,67 @@
     timer = setTimeout(syncNow, 2500);
   }
 
-  /* ---------- Silent account ----------
-     The app opens with no sign-in. Each phone gets an anonymous account in the background,
-     and if that fails the app simply keeps working from this phone's copy. */
-  let starting = false;
-  async function startAnonymous() {
-    if (!enabled || session || starting || navigator.onLine === false) return;
-    starting = true;
-    const r = await client.auth.signInAnonymously();
-    starting = false;
-    if (r.error) setState('local', r.error.message);
+  /* ---------- Accounts ---------- */
+  const MESSAGES = [
+    [/invalid login credentials/i, 'Nieprawidłowy e-mail lub hasło.'],
+    [/email not confirmed/i, 'Najpierw potwierdź e-mail: otwórz wiadomość i kliknij link.'],
+    [/already registered|already exists/i, 'Ten e-mail ma już konto. Zaloguj się.'],
+    [/password should be at least|weak/i, 'Hasło jest za krótkie. Użyj co najmniej 8 znaków.'],
+    [/invalid.*email|unable to validate email/i, 'Nieprawidłowy e-mail.'],
+    [/rate limit|too many/i, 'Zbyt wiele prób. Poczekaj minutę.'],
+    [/failed to fetch|network/i, 'Brak połączenia z internetem.']
+  ];
+  function friendlyError(e) {
+    const msg = e && e.message ? e.message : String(e);
+    for (let i = 0; i < MESSAGES.length; i++) if (MESSAGES[i][0].test(msg)) return MESSAGES[i][1];
+    return 'Błąd: ' + msg;
   }
-  // Read-only copy of someone's progress, for the follow link.
-  async function viewer(id) {
-    const c = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
-    });
-    const res = await c.rpc('arabski_view', { uid: id });
-    if (res.error) throw res.error;
-    return res.data;
+  function appUrl() { return location.origin + location.pathname; }
+
+  async function signIn(email, password) {
+    const r = await client.auth.signInWithPassword({ email: email, password: password });
+    if (r.error) return { error: friendlyError(r.error) };
+    return { ok: true };
+  }
+  async function signUp(email, password) {
+    const r = await client.auth.signUp({ email: email, password: password, options: { emailRedirectTo: appUrl() } });
+    if (r.error) return { error: friendlyError(r.error) };
+    if (!r.data.session) return { confirm: true };
+    return { ok: true };
+  }
+  async function resetPassword(email) {
+    const r = await client.auth.resetPasswordForEmail(email, { redirectTo: appUrl() });
+    if (r.error) return { error: friendlyError(r.error) };
+    return { ok: true };
+  }
+  async function setNewPassword(password) {
+    const r = await client.auth.updateUser({ password: password });
+    if (r.error) return { error: friendlyError(r.error) };
+    recovery = false;
+    return { ok: true };
+  }
+  async function signOut() {
+    clearTimeout(timer);
+    await client.auth.signOut();
   }
 
   function init(h) {
     hooks = h;
     if (!enabled) return;
     client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'arabski-dom-auth' }
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'polski-dom-auth' }
     });
     client.auth.onAuthStateChange(function (event, s) {
       session = s;
-      if (!s) { setState('local'); setTimeout(startAnonymous, 0); return; }
+      if (event === 'PASSWORD_RECOVERY') { recovery = true; setState('recovery'); if (hooks.onRecovery) hooks.onRecovery(); return; }
+      if (!s) { setState('signed-out'); return; }
       if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
         setState('synced');
         // Supabase advises not awaiting other client calls inside this callback.
         setTimeout(syncNow, 0);
       }
     });
-    window.addEventListener('online', function () { if (session) syncNow(); else startAnonymous(); });
+    window.addEventListener('online', function () { if (session) syncNow(); });
     window.addEventListener('offline', function () { if (session) setState('offline'); });
     document.addEventListener('visibilitychange', function () { if (!document.hidden && session) syncNow(); });
   }
@@ -163,8 +188,12 @@
     init: init,
     schedule: schedule,
     syncNow: syncNow,
-    viewer: viewer,
+    signIn: signIn,
+    signUp: signUp,
+    signOut: signOut,
+    resetPassword: resetPassword,
+    setNewPassword: setNewPassword,
     merge: merge,
-    status: function () { return { state: state, id: session ? session.user.id : null, last: lastSync(), error: lastError }; }
+    status: function () { return { state: state, email: session ? session.user.email : null, last: lastSync(), error: lastError, recovery: recovery }; }
   };
 })();

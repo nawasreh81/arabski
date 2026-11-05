@@ -40,9 +40,9 @@
       installH: 'Dodaj do ekranu głównego', installNow: 'Zainstaluj teraz', installTxt: 'Chrome na Androidzie: naciśnij ⋮ u góry, potem „Zainstaluj aplikację” lub „Dodaj do ekranu głównego”.',
       keyH: 'Jak czytać zapis', keyTxt: 'Czytaj jak po polsku. Specjalne znaki: \' = gardłowe ajn, H = mocne h, gh = jak francuskie r, ł = polskie ł, g = zwykłe g. Litery s i z czytaj twardo, także przed i.',
       langH: 'Język', progressH: 'Twoje postępy', savedHere: 'Postępy są zapisane na tym urządzeniu{0}. Początek: {1}.', savedCloud: ' i w chmurze', reset: 'Zacznij od zera', resetQ: 'Usuniesz wszystkie postępy i wyniki testów. Na pewno?', resetYes: 'Tak, usuń wszystko', cancel: 'Anuluj', husbandBtn: 'Panel męża (po arabsku)',
-      cloudH: 'Kopia w chmurze', cloudAuto: 'Postępy zapisują się automatycznie, bez logowania.', cloudLocal: 'Postępy są na tym telefonie. Kopia zapisze się automatycznie po połączeniu z internetem.', 
-      
-      cSynced: 'Zapisano w chmurze', cSyncing: 'Zapisywanie w chmurze…', cOffline: 'Brak internetu: zapisze się po połączeniu', cError: 'Nie udało się zapisać w chmurze'
+      cloudH: 'Kopia w chmurze', cloudOff: 'Wyłączona w tej wersji. Postępy są tylko na tym urządzeniu.', cloudNew: 'Wpisz nowe hasło do konta.', newPass: 'Nowe hasło', savePass: 'Zapisz hasło', signedAs: 'Zalogowano jako', lastSave: 'Ostatni zapis: {0}', anyDevice: 'Zaloguj się tym samym kontem na innym urządzeniu, aby zobaczyć postępy.', saveNow: 'Zapisz teraz', signOut: 'Wyloguj się',
+      cloudWhy: 'Zaloguj się, aby postępy były bezpieczne, a mąż mógł je śledzić.', email: 'E-mail', passLbl: 'Hasło (min. 8 znaków)', signIn: 'Zaloguj się', signUp: 'Załóż konto', forgot: 'Nie pamiętasz hasła?', badEmail: 'Wpisz poprawny e-mail.', shortPass: 'Hasło musi mieć co najmniej 8 znaków.', signingIn: 'Logowanie…', signingUp: 'Tworzenie konta…', confirmMail: 'Konto utworzone. Otwórz e-mail, kliknij link i zaloguj się.', sending: 'Wysyłanie…', resetSent: 'Wysłaliśmy link na twój e-mail.',
+      cSynced: 'Zapisano w chmurze', cSyncing: 'Zapisywanie w chmurze…', cOffline: 'Brak internetu: zapisze się po połączeniu', cError: 'Nie udało się zapisać w chmurze', cSignedOut: 'Zaloguj się, aby zapisać postępy', cRecovery: 'Wybierz nowe hasło'
     },
     en: {
       appSub: 'Jordanian Arabic through conversation', langBtn: 'Polski', settings: 'Settings', close: 'Exit',
@@ -81,9 +81,9 @@
       installH: 'Add to home screen', installNow: 'Install now', installTxt: 'Chrome on Android: tap ⋮ at the top, then “Install app” or “Add to Home screen”.',
       keyH: 'How to read the spelling', keyTxt: 'Read it as Polish. Special marks: \' = the throat sound ayn, H = a strong h, gh = like a French r, ł = English w, g = a plain g. Keep s and z hard, even before i.',
       langH: 'Language', progressH: 'Your progress', savedHere: 'Progress is saved on this device{0}. Started: {1}.', savedCloud: ' and in the cloud', reset: 'Start from zero', resetQ: 'This deletes all progress and test results. Are you sure?', resetYes: 'Yes, delete everything', cancel: 'Cancel', husbandBtn: 'Husband’s panel (in Arabic)',
-      cloudH: 'Cloud backup', cloudAuto: 'Progress saves automatically, with no sign-in.', cloudLocal: 'Progress is on this phone. A backup saves automatically once you’re online.', 
-      
-      cSynced: 'Saved in the cloud', cSyncing: 'Saving to the cloud…', cOffline: 'Offline: will save when connected', cError: 'Couldn’t save to the cloud'
+      cloudH: 'Cloud backup', cloudOff: 'Not enabled in this version. Progress stays on this device.', cloudNew: 'Enter a new password for your account.', newPass: 'New password', savePass: 'Save password', signedAs: 'Signed in as', lastSave: 'Last saved: {0}', anyDevice: 'Sign in with the same account on another device to see progress there.', saveNow: 'Save now', signOut: 'Sign out',
+      cloudWhy: 'Sign in to keep your progress safe and let your husband follow it.', email: 'Email', passLbl: 'Password (8 characters or more)', signIn: 'Sign in', signUp: 'Create account', forgot: 'Forgot your password?', badEmail: 'Enter a valid email.', shortPass: 'The password must be at least 8 characters.', signingIn: 'Signing in…', signingUp: 'Creating account…', confirmMail: 'Account created. Open your email, click the link, then sign in.', sending: 'Sending…', resetSent: 'We sent a link to your email.',
+      cSynced: 'Saved in the cloud', cSyncing: 'Saving to the cloud…', cOffline: 'Offline: will save when connected', cError: 'Couldn’t save to the cloud', cSignedOut: 'Sign in to save your progress', cRecovery: 'Choose a new password'
     }
   };
 })();

@@ -315,7 +315,6 @@ input[type=email], input[type=password] {
 .head-actions { display: flex; align-items: center; gap: 4px; }
 .reward { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-weight: 600; color: var(--brand); padding-inline: 2px; }
 .husband { display: grid; gap: 14px; }
-.follow-link { overflow-wrap: anywhere; font-size: .82rem; color: var(--muted); }
 
 @media (min-width: 520px) {
   .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }

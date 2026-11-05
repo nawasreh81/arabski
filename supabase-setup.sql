@@ -19,18 +19,3 @@ create policy "add own arabski progress" on public.arabski_progress
 
 create policy "change own arabski progress" on public.arabski_progress
   for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
--- Read-only progress for the husband's follow link. The account id in the link is the key,
--- so the page needs no sign-in, and nobody can list accounts or change anything through it.
-create or replace function public.arabski_view(uid uuid)
-returns jsonb
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select data from public.arabski_progress where user_id = uid;
-$$;
-
-revoke all on function public.arabski_view(uuid) from public;
-grant execute on function public.arabski_view(uuid) to anon, authenticated;
