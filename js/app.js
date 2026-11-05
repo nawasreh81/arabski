@@ -990,6 +990,7 @@
       '<section class="home">' +
       '<header class="home-head"><div><p class="brand">Arabski w domu</p><p class="brand-sub">' + t('appSub') + '</p><button type="button" class="cloud" data-a="cloud" hidden></button></div><div class="head-actions"><button type="button" class="btn ghost small" data-a="lang">' + t('langBtn') + '</button><button type="button" class="icon-only" data-a="settings" aria-label="' + t('settings') + '">' + ICON.gear + '</button></div></header>' +
       '<div class="voice-warn" hidden></div>' +
+      '<div class="install-box" hidden><button type="button" class="btn ghost big-btn" data-a="install-home">' + t('installApp') + '</button><p class="note" hidden>' + t('installTxt') + '</p></div>' +
       (pattern ? '<p class="sound-note">' + esc(t('soundNote', pattern.letters)) + '</p>' : '') +
       '<div class="card cta">' + cta + '</div>' +
       '<div class="reward"><span>' + t('streak', streak()) + '</span><span>' + t('points', S.points) + '</span></div>' +
@@ -1012,6 +1013,7 @@
     app.querySelector('[data-a=sounds]').onclick = soundsScreen;
     app.querySelector('[data-a=lang]').onclick = function () { setLang(S.lang === 'pl' ? 'en' : 'pl'); home(); };
     updateCloud();
+    updateInstall();
 
     const list = app.querySelector('.lessons');
     // Shown only once the day's required test and lesson are finished.
@@ -1310,7 +1312,21 @@
 
   /* ---------- Install and offline ---------- */
   let deferredInstall = null;
-  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredInstall = e; });
+  let installed = false;
+  function isInstalled() { return installed || window.matchMedia('(display-mode: standalone)').matches; }
+  // Chrome may offer its install dialog only after a moment; until then the button shows the steps.
+  function updateInstall() {
+    const box = app.querySelector('.install-box');
+    if (!box) return;
+    box.hidden = isInstalled();
+    box.querySelector('button').onclick = function () {
+      if (!deferredInstall) { box.querySelector('.note').hidden = false; return; }
+      deferredInstall.prompt();
+      deferredInstall = null;
+    };
+  }
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredInstall = e; updateInstall(); });
+  window.addEventListener('appinstalled', function () { installed = true; deferredInstall = null; updateInstall(); });
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { /* offline cache unavailable */ }); });
   }
